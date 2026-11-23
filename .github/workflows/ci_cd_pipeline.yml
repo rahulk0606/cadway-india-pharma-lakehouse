@@ -2,28 +2,95 @@ name: Cadway India Pharma Lakehouse CI/CD
 
 on:
   push:
-    branches: [ master, develop ]
+    branches: [ main, master, develop ]
   pull_request:
-    branches: [ master ]
+    branches: [ main, master ]
+  workflow_dispatch:
+
+permissions:
+  contents: write   # Allows CD to publish GitHub Releases
+  packages: write   # Allows CD to push Docker images to ghcr.io
 
 jobs:
-  quality-and-tests:
+  # =========================================================================
+  # STAGE 1: CONTINUOUS INTEGRATION (LINTING & PYSPARK UNIT TESTS)
+  # =========================================================================
+  ci-test-and-lint:
+    name: CI - Lint & Pytest Quality Gates
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
-      - uses: actions/setup-python@v5
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v5
         with:
           python-version: '3.10'
           cache: 'pip'
+
       - name: Install Dependencies
-        run: pip install -r requirements.txt
-      - name: Run Flake8 Linter
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Static Code Analysis (Flake8)
         run: flake8 src/ tests/ data_generator/ --max-line-length=120 --ignore=E501,W503,W504,E712
-      - name: Run PySpark Unit & SCD2 Tests
+
+      - name: Run PySpark & SCD Type 2 Unit Tests
         env:
           PYTHONPATH: .
         run: pytest tests/ -v
+
+  # =========================================================================
+  # STAGE 2: CONTINUOUS DEPLOYMENT (ZERO-KEY RELEASE & DOCKER REGISTRY)
+  # =========================================================================
+  cd-deploy-release:
+    name: CD - Publish Release & Container Image
+    needs: ci-test-and-lint
+    if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Package PySpark Bundle (cadway_etl.zip)
+        run: |
+          mkdir -p dist
+          zip -r dist/cadway_etl.zip src/ config/ -x "*/__pycache__/*" "*.pyc"
+
+      - name: Log in to GitHub Container Registry (Zero Keys - Uses Built-in Token)
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build & Push Production Docker Image to GHCR
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/cadway-india-lakehouse:latest
+            ghcr.io/${{ github.repository_owner }}/cadway-india-lakehouse:v1.0.${{ github.run_number }}
+
+      - name: Publish Versioned GitHub Release with Spark Artifact
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.0.${{ github.run_number }}
+          name: "Release v1.0.${{ github.run_number }} - Cadway Pharma ETL"
+          body: |
+            Automated CD release triggered from commit `${{ github.sha }}`.
+            - **Spark Cluster Bundle:** `cadway_etl.zip` attached below.
+            - **Docker Image:** `ghcr.io/${{ github.repository_owner }}/cadway-india-lakehouse:latest`
+          files: dist/cadway_etl.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
