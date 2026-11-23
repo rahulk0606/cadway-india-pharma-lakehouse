@@ -158,18 +158,23 @@ Fact jobs join dimensions using temporal range predicates (event_date BETWEEN ef
 5. Automated CI/CD Quality Gates:
 Every push and pull request triggers .github/workflows/ci_cd_pipeline.yml, enforcing PEP8 standards via flake8 and validating data cleaning and SCD Type 2 expiration logic via pytest.
 
-📂 Repository Layout
-├── .github/workflows/ci_cd_pipeline.yml  # GitHub Actions CI/CD workflow
-├── config/pipeline_config.yaml           # Environment & JDBC configurations
-├── ddl/
-│   ├── 01_cadway_india_galaxy_dw.sql     # Galaxy Schema DDL & Indexes
-│   └── 02_seed_india_master.sql          # 36 Indian States/UTs, Indian FY Date & CDSCO Drugs
-├── data_generator/
-│   └── generate_india_pharma_data.py     # Synthetic dirty/clean Indian pharma test generator
-├── src/
-│   ├── utils/                            # SparkSession builder, DQ Engine, SCD2 Engine
-│   └── jobs/                             # 01_bronze_to_silver, 02_sync_dimensions, 03_silver_to_gold
-├── tests/                                # Pytest unit & SCD2 verification suite
-├── Dockerfile                            # Java 17 + PySpark + MySQL/AWS Jars
-├── docker-compose.yml                    # Local MySQL + Spark stack
-└── run_pipeline.sh                       # End-to-end orchestration script
+cadway-india-pharma-lakehouse/
+├── .github/workflows/ci_cd_pipeline.yml
+├── config/pipeline_config.yaml
+├── ddl/01_cadway_india_galaxy_dw.sql
+├── ddl/02_seed_india_master.sql
+├── data_generator/generate_india_pharma_data.py
+├── src/utils/spark_session.py
+├── src/utils/dq_engine.py
+├── src/utils/scd2_engine.py
+├── src/jobs/01_bronze_to_silver.py
+├── src/jobs/02_sync_dimensions_scd2.py
+├── src/jobs/03_silver_to_gold.py
+├── tests/test_dq_engine.py
+├── tests/test_scd2_engine.py
+├── Dockerfile
+├── docker-compose.yml
+├── requirements.txt
+├── run_pipeline.sh
+├── .gitignore
+└── README.md
