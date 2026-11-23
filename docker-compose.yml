@@ -1,0 +1,29 @@
+services:
+  mysql-dw:
+    image: mysql:8.0
+    container_name: cadway-mysql-dw
+    environment:
+      MYSQL_ROOT_PASSWORD: CadwayRootPassword123!
+      MYSQL_DATABASE: cadway_india_dw
+    ports:
+      - "3307:3306"
+    volumes:
+      - ./ddl/01_cadway_india_galaxy_dw.sql:/docker-entrypoint-initdb.d/01_schema.sql
+      - ./ddl/02_seed_india_master.sql:/docker-entrypoint-initdb.d/02_seed.sql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-pCadwayRootPassword123!"]
+      interval: 5s
+      timeout: 5s
+      retries: 15
+
+  spark-etl:
+    build: .
+    container_name: cadway-spark-etl
+    depends_on:
+      mysql-dw:
+        condition: service_healthy
+    environment:
+      MYSQL_HOST: mysql-dw
+      STORAGE_BASE_PATH: /app/mock_s3
+    volumes:
+      - ./mock_s3:/app/mock_s3

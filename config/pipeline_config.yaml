@@ -1,0 +1,16 @@
+project:
+  name: "Cadway Life Sciences India Data Lakehouse"
+  hipaa_abha_salt: "CADWAY_INDIA_ABHA_SALT_2026"
+
+storage:
+  # Defaults to local mock_s3 inside Docker; override with s3a://your-bucket in AWS
+  base_path: "/app/mock_s3"
+
+mysql:
+  host: "mysql-dw"
+  port: 3306
+  database: "cadway_india_dw"
+  user: "root"
+  password: "CadwayRootPassword123!"
+  driver: "com.mysql.cj.jdbc.Driver"
+  batch_size: "10000"
