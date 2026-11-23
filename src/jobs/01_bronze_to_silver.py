@@ -5,9 +5,15 @@ from pyspark.sql.types import StructType, StructField, StringType, DoubleType, I
 from src.utils.spark_session import get_spark_session, load_config
 from src.utils.dq_engine import IndiaPharmaDQEngine
 
+
 def log_audit(cfg: dict, job_name: str, domain: str, read_cnt: int, valid_cnt: int, bad_cnt: int):
     m = cfg["mysql"]
-    conn = mysql.connector.connect(host=m["host"], port=m["port"], user=m["user"], password=m["password"], database=m["database"])
+    conn = mysql.connector.connect(
+        host=m["host"],
+        port=m["port"],
+        user=m["user"],
+        password=m["password"],
+        database=m["database"])
     cur = conn.cursor()
     cur.execute(
         "INSERT INTO etl_pipeline_audit (run_id, job_name, domain, records_read, records_valid, records_quarantined, status) VALUES (%s,%s,%s,%s,%s,%s,%s)",
@@ -16,6 +22,7 @@ def log_audit(cfg: dict, job_name: str, domain: str, read_cnt: int, valid_cnt: i
     conn.commit()
     cur.close()
     conn.close()
+
 
 def run():
     cfg = load_config()
@@ -33,13 +40,18 @@ def run():
         StructField("age", IntegerType()), StructField("comorbidity_risk", StringType()),
         StructField("_corrupt_record", StringType())
     ])
-    df_clin = spark.read.option("header", "true").option("mode", "PERMISSIVE").schema(clin_schema).csv(f"{base}/bronze/clinical/")
+    df_clin = spark.read.option("header", "true").option(
+        "mode", "PERMISSIVE").schema(clin_schema).csv(f"{base}/bronze/clinical/")
     read_c = df_clin.count()
 
     df_clin = IndiaPharmaDQEngine.clean_strings_and_blanks(df_clin)
     df_clin = IndiaPharmaDQEngine.standardize_indian_dates(df_clin, "obs_date")
-    df_clin = IndiaPharmaDQEngine.map_values(df_clin, "gender", {"M": "MALE", "MALE": "MALE", "F": "FEMALE", "FEMALE": "FEMALE"}, "OTHER")
-    df_clin = IndiaPharmaDQEngine.map_values(df_clin, "adverse_event", {"Y": "1", "YES": "1", "1": "1", "N": "0", "NO": "0", "0": "0"}, "0")
+    df_clin = IndiaPharmaDQEngine.map_values(
+        df_clin, "gender", {
+            "M": "MALE", "MALE": "MALE", "F": "FEMALE", "FEMALE": "FEMALE"}, "OTHER")
+    df_clin = IndiaPharmaDQEngine.map_values(
+        df_clin, "adverse_event", {
+            "Y": "1", "YES": "1", "1": "1", "N": "0", "NO": "0", "0": "0"}, "0")
     df_clin = IndiaPharmaDQEngine.deduplicate(df_clin, ["obs_id"], "obs_date")
 
     clin_rule = (
@@ -67,12 +79,15 @@ def run():
         StructField("output_kg", DoubleType()), StructField("qc_status", StringType()),
         StructField("mfg_cost_inr", DoubleType()), StructField("_corrupt_record", StringType())
     ])
-    df_mfg = spark.read.option("header", "true").option("mode", "PERMISSIVE").schema(mfg_schema).csv(f"{base}/bronze/manufacturing/")
+    df_mfg = spark.read.option("header", "true").option(
+        "mode", "PERMISSIVE").schema(mfg_schema).csv(f"{base}/bronze/manufacturing/")
     read_m = df_mfg.count()
 
     df_mfg = IndiaPharmaDQEngine.clean_strings_and_blanks(df_mfg)
     df_mfg = IndiaPharmaDQEngine.standardize_indian_dates(df_mfg, "mfg_date")
-    df_mfg = IndiaPharmaDQEngine.map_values(df_mfg, "qc_status", {"PASS": "1", "PASSED": "1", "1": "1", "FAIL": "0", "FAILED": "0", "0": "0"}, "0")
+    df_mfg = IndiaPharmaDQEngine.map_values(
+        df_mfg, "qc_status", {
+            "PASS": "1", "PASSED": "1", "1": "1", "FAIL": "0", "FAILED": "0", "0": "0"}, "0")
     df_mfg = IndiaPharmaDQEngine.deduplicate(df_mfg, ["batch_lot_id"], "mfg_date")
 
     mfg_rule = (
@@ -98,12 +113,15 @@ def run():
         StructField("strips_sold", IntegerType()), StructField("gross_sales_inr", DoubleType()),
         StructField("marketing_spend_inr", DoubleType()), StructField("_corrupt_record", StringType())
     ])
-    df_sales = spark.read.option("header", "true").option("mode", "PERMISSIVE").schema(sales_schema).csv(f"{base}/bronze/sales/")
+    df_sales = spark.read.option("header", "true").option(
+        "mode", "PERMISSIVE").schema(sales_schema).csv(f"{base}/bronze/sales/")
     read_s = df_sales.count()
 
     df_sales = IndiaPharmaDQEngine.clean_strings_and_blanks(df_sales)
     df_sales = IndiaPharmaDQEngine.standardize_indian_dates(df_sales, "sale_date")
-    df_sales = IndiaPharmaDQEngine.map_values(df_sales, "promo_channel", {"MR": "MR_Visit", "WHATSAPP": "WhatsApp_Detail", "CME": "CME_Event"}, "Digital")
+    df_sales = IndiaPharmaDQEngine.map_values(
+        df_sales, "promo_channel", {
+            "MR": "MR_Visit", "WHATSAPP": "WhatsApp_Detail", "CME": "CME_Event"}, "Digital")
     df_sales = IndiaPharmaDQEngine.deduplicate(df_sales, ["invoice_id"], "sale_date")
 
     sales_rule = (
@@ -121,6 +139,7 @@ def run():
     log_audit(cfg, "01_bronze_to_silver", "COMMERCIAL_SALES", read_s, valid_s.count(), bad_s.count())
 
     spark.stop()
+
 
 if __name__ == "__main__":
     run()

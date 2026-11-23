@@ -52,7 +52,10 @@ def run():
         fact_mfg.write.jdbc(jdbc_url, "fact_mfg_batches", mode="append", properties=props)
 
     # 3. Fact Commercial Sales India (Idempotent + Point-in-time SCD2 join)
-    existing_sales_ids = spark.read.jdbc(jdbc_url, "(SELECT invoice_id FROM fact_commercial_sales_india) t", properties=props)
+    existing_sales_ids = spark.read.jdbc(
+        jdbc_url,
+        "(SELECT invoice_id FROM fact_commercial_sales_india) t",
+        properties=props)
     fact_sales = (
         sales.alias("s")
         .join(existing_sales_ids, "invoice_id", "left_anti")
@@ -99,9 +102,10 @@ def run():
             F.round(F.sum("net_revenue_inr") / 100000.0, 2).alias("net_revenue_lakhs_inr"),
             F.round(
                 F.when(F.sum("marketing_spend_inr") > 0, F.sum("net_revenue_inr") / F.sum("marketing_spend_inr"))
-                 .otherwise(F.lit(0.0)),
+                .otherwise(F.lit(0.0)),
                 2
             ).alias("marketing_roi")
+
         )
     )
 

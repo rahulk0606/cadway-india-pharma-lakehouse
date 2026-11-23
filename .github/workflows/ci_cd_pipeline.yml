@@ -22,7 +22,7 @@ jobs:
       - name: Install Dependencies
         run: pip install -r requirements.txt
       - name: Run Flake8 Linter
-        run: flake8 src/ tests/ data_generator/ --max-line-length=120 --ignore=E501,W503
+        run: flake8 src/ tests/ data_generator/ --max-line-length=120 --ignore=E501,W503,W504,E712
       - name: Run PySpark Unit & SCD2 Tests
         env:
           PYTHONPATH: .

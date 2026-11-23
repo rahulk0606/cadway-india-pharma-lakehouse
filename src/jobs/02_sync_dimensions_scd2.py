@@ -38,7 +38,10 @@ def sync_scd2_dimension(spark, cfg, stage_df, table_name, sk_col, biz_key, track
     )
 
     # 4. Expire any previously active rows in MySQL if re-running incrementally
-    existing_active = spark.read.jdbc(jdbc_url, f"(SELECT {sk_col}, {biz_key}, row_hash FROM {table_name} WHERE is_current = 1) t", properties=props)
+    existing_active = spark.read.jdbc(
+        jdbc_url,
+        f"(SELECT {sk_col}, {biz_key}, row_hash FROM {table_name} WHERE is_current = 1) t",
+        properties=props)
     earliest_new = (
         scd2_ready_df.groupBy(biz_key)
         .agg(F.min("effective_start_date").alias("min_start"), F.first("row_hash").alias("first_hash"))
@@ -52,7 +55,12 @@ def sync_scd2_dimension(spark, cfg, stage_df, table_name, sk_col, biz_key, track
     )
 
     if to_expire:
-        conn = mysql.connector.connect(host=m["host"], port=m["port"], user=m["user"], password=m["password"], database=m["database"])
+        conn = mysql.connector.connect(
+            host=m["host"],
+            port=m["port"],
+            user=m["user"],
+            password=m["password"],
+            database=m["database"])
         cur = conn.cursor()
         cur.executemany(
             f"UPDATE {table_name} SET is_current = 0, effective_end_date = %s WHERE {sk_col} = %s",
@@ -89,7 +97,8 @@ def run():
         clin.join(F.broadcast(geo_df), "state_code", "inner")
         .select("abha_token_id", "geo_sk", "age_group", "gender", "comorbidity_risk", F.col("obs_date").alias("eff_dt"))
     )
-    sync_scd2_dimension(spark, cfg, pat_stage, "dim_patient_scd2", "patient_sk", "abha_token_id", ["geo_sk", "comorbidity_risk"], "eff_dt")
+    sync_scd2_dimension(spark, cfg, pat_stage, "dim_patient_scd2", "patient_sk",
+                        "abha_token_id", ["geo_sk", "comorbidity_risk"], "eff_dt")
 
     # 2. Sync Dim_Facility_SCD2
     mfg = spark.read.parquet(f"{base}/silver/manufacturing/")
@@ -97,7 +106,8 @@ def run():
         mfg.join(F.broadcast(geo_df), "state_code", "inner")
         .select("facility_code", "plant_name", "geo_sk", "who_gmp_status", F.col("mfg_date").alias("eff_dt"))
     )
-    sync_scd2_dimension(spark, cfg, fac_stage, "dim_facility_scd2", "facility_sk", "facility_code", ["who_gmp_status", "geo_sk"], "eff_dt")
+    sync_scd2_dimension(spark, cfg, fac_stage, "dim_facility_scd2", "facility_sk",
+                        "facility_code", ["who_gmp_status", "geo_sk"], "eff_dt")
 
     # 3. Sync Dim_Doctor_SCD2
     sales = spark.read.parquet(f"{base}/silver/sales/")
@@ -105,7 +115,8 @@ def run():
         sales.join(F.broadcast(geo_df), "state_code", "inner")
         .select("nmc_reg_number", "geo_sk", F.col("doctor_specialty").alias("specialty"), "prescriber_tier", F.col("sale_date").alias("eff_dt"))
     )
-    sync_scd2_dimension(spark, cfg, doc_stage, "dim_doctor_scd2", "doctor_sk", "nmc_reg_number", ["geo_sk", "specialty", "prescriber_tier"], "eff_dt")
+    sync_scd2_dimension(spark, cfg, doc_stage, "dim_doctor_scd2", "doctor_sk",
+                        "nmc_reg_number", ["geo_sk", "specialty", "prescriber_tier"], "eff_dt")
 
     spark.stop()
 

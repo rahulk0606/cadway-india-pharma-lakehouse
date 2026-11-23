@@ -1,6 +1,7 @@
 from pyspark.sql import DataFrame, Window
 from pyspark.sql import functions as F
 
+
 class IndiaPharmaDQEngine:
     @staticmethod
     def clean_strings_and_blanks(df: DataFrame) -> DataFrame:
@@ -38,5 +39,8 @@ class IndiaPharmaDQEngine:
     def split_quarantine(df: DataFrame, rule_expr) -> tuple[DataFrame, DataFrame]:
         evaluated = df.withColumn("_valid", rule_expr)
         valid_df = evaluated.filter(F.col("_valid") == True).drop("_valid", "_corrupt_record")
-        bad_df = evaluated.filter(F.col("_valid") == False).withColumn("quarantined_at", F.current_timestamp()).drop("_valid")
+        bad_df = evaluated.filter(
+            F.col("_valid") == False).withColumn(
+            "quarantined_at",
+            F.current_timestamp()).drop("_valid")
         return valid_df, bad_df

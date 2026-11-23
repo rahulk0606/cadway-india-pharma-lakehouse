@@ -4,7 +4,6 @@ import yaml
 from pyspark.sql import SparkSession
 
 
-
 def load_config():
     with open("config/pipeline_config.yaml", "r") as f:
         cfg = yaml.safe_load(f)
