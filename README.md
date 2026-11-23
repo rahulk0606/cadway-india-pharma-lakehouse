@@ -1,10 +1,11 @@
 # 🧬 Cadway Life Sciences India — Enterprise Pharma Data Lakehouse
 
-[![CI/CD Pipeline](https://shields.io)](.github/workflows/ci_cd_pipeline.yml)
-[![PySpark](https://shields.io)](https://apache.org)
-[![AWS S3](https://shields.io)](https://amazon.com)
-[![MySQL](https://shields.io)](https://mysql.com)
-[![Docker](https://shields.io)](docker-compose.yml)
+[![CI/CD Pipeline](https://github.com)](https://github.com)
+![PySpark 3.5](https://shields.io)
+![Apache Iceberg](https://shields.io)
+![AWS S3 & EMR](https://shields.io)
+![MySQL 8.0](https://shields.io)
+![Docker](https://shields.io)
 
 An end-to-end, production-grade **Data Engineering Lakehouse & Dimensional Warehouse** built for **Cadway Life Sciences** (Commercial Marketing & Sales) and its parent company **Zedlay Pharma** (Clinical Trials & Schedule M Manufacturing) operating across **India**.
 
@@ -158,7 +159,6 @@ Fact jobs join dimensions using temporal range predicates (event_date BETWEEN ef
 Every push and pull request triggers .github/workflows/ci_cd_pipeline.yml, enforcing PEP8 standards via flake8 and validating data cleaning and SCD Type 2 expiration logic via pytest.
 
 📂 Repository Layout
-
 ├── .github/workflows/ci_cd_pipeline.yml  # GitHub Actions CI/CD workflow
 ├── config/pipeline_config.yaml           # Environment & JDBC configurations
 ├── ddl/
