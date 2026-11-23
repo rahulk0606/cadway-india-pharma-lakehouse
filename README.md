@@ -158,23 +158,44 @@ Fact jobs join dimensions using temporal range predicates (event_date BETWEEN ef
 5. Automated CI/CD Quality Gates:
 Every push and pull request triggers .github/workflows/ci_cd_pipeline.yml, enforcing PEP8 standards via flake8 and validating data cleaning and SCD Type 2 expiration logic via pytest.
 
-cadway-india-pharma-lakehouse/
-├── .github/workflows/ci_cd_pipeline.yml
-├── config/pipeline_config.yaml
-├── ddl/01_cadway_india_galaxy_dw.sql
-├── ddl/02_seed_india_master.sql
-├── data_generator/generate_india_pharma_data.py
-├── src/utils/spark_session.py
-├── src/utils/dq_engine.py
-├── src/utils/scd2_engine.py
-├── src/jobs/01_bronze_to_silver.py
-├── src/jobs/02_sync_dimensions_scd2.py
-├── src/jobs/03_silver_to_gold.py
-├── tests/test_dq_engine.py
-├── tests/test_scd2_engine.py
-├── Dockerfile
-├── docker-compose.yml
-├── requirements.txt
-├── run_pipeline.sh
-├── .gitignore
-└── README.md
+## 🏗️ Project Architecture
+
+### 1. Data Lakehouse & ETL Pipeline
+```mermaid
+flowchart TD
+    subgraph Ingestion ["1. Data Generation & Config"]
+        GEN["data_generator/<br/>generate_india_pharma_data.py"]
+        CFG["config/<br/>pipeline_config.yaml"]
+    end
+
+    subgraph Core ["2. Shared Spark & Data Engines"]
+        SPK["src/utils/spark_session.py"]
+        DQ["src/utils/dq_engine.py<br/>(Data Quality)"]
+        SCD["src/utils/scd2_engine.py<br/>(SCD Type 2)"]
+    end
+
+    subgraph ETL ["3. Medallion ETL Jobs"]
+        B2S["01_bronze_to_silver.py<br/>(Cleanse & Validate)"]
+        DIM["02_sync_dimensions_scd2.py<br/>(Dimension History)"]
+        S2G["03_silver_to_gold.py<br/>(Galaxy Schema Fact/Dim)"]
+    end
+
+    subgraph Warehouse ["4. Data Warehouse (DDL)"]
+        DDL1["ddl/01_cadway_india_galaxy_dw.sql"]
+        DDL2["ddl/02_seed_india_master.sql"]
+    end
+
+    GEN & CFG --> B2S
+    SPK & DQ & SCD -.-> ETL
+    B2S --> DIM --> S2G
+    DDL1 & DDL2 --> S2G
+```
+
+### 2. CI/CD & Containerized Execution
+```mermaid
+flowchart LR
+    DEV["Feature Branch"] -->|Push / PR| GHA["GitHub Actions<br/>(ci_cd_pipeline.yml)"]
+    GHA --> TEST["Pytest Suite<br/>(test_dq_engine.py<br/>test_scd2_engine.py)"]
+    TEST -->|Pass ✅| BUILD["Docker Build<br/>(Dockerfile / compose)"]
+    BUILD -->|Merge to Main| RUN["Orchestration<br/>(run_pipeline.sh)"]
+```
